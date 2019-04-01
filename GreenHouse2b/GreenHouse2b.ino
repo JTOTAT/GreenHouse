@@ -1,6 +1,20 @@
 
+/*
+ I use a 9volt DC wall wart to power this device. 
+ The LCD is a 3 wire sparkfun Serial Enabled 16x2 LCD ( LCD-09395 )
+ This uses a DS3234 RTC (real time clock) for all time keeping tasks. 
+ The temperture sensor is a DS18B20. (only one sensor is used, but you could add more with some code changes) 
+ The x10 control is via a CM17A FireCracker (9 pin serial) that uses an X10 Arduino library
+ (I know X10 is old tech but for this purpose is works great) 
+ You will need the X10 Transceiver and modules for the pump and fan...
+ OR you can use the SS relay for the pump.
+ Art work for the PCB can be found at; https://github.com/JTOTAT/GreenHouse
+ This also uses a SS AC relay for 110VAC to control a pump, controled by pin 9 (ss = 9) 
+ I make no claims on functionality or stupidity of anyone's actions so be carful. 
+ Jon Turnquist 4/1/19
+ To watch a video of this device see youtube channel (JTandHZ)
+*/
 
-// GreenHouse 2B added string of HX plus time stamp 3/36/19
 #include <SoftwareSerial.h>
 
 // Attach the serial enabld LCD's RX line to digital pin 11
@@ -26,8 +40,7 @@ const int button7 = 7;     // the number of the pushbutton pin
 int buttonState = 0;         // variable for reading the pushbutton status
 int butState5 = 0;        // variable for reading the pushbutton status
 int butState7 = 0;        // variable for reading the pushbutton status
-
-int screen = 1; // LCD screen controller
+int screen = 1;      // LCD screen controller
 OneWire oneWire(DATA_PIN);
 DallasTemperature sensors(&oneWire);
 DeviceAddress sensorDeviceAddress;
@@ -109,37 +122,31 @@ pinMode(9, OUTPUT); // SS Relay pin for pump
   LCD.write("                   ");
  
 } 
-int casecop = 1;
+int casecop = 1;  // data control 
 int whatthing = 0; // last action number
-int ss = 9;
+int ss = 9;   // pin for ss relay
 int dateCOP = 666;
-int cop = 1;  //used for data control
+int cop = 1;  //all "cops" used for data control
 int Heatcop = 1;
 int Fancop = 1;
 int HT = 0; //High temp
-int TE = 55; //24 temp extreme  
+int TE = 55; //24 temp extreme (low in AM and High temp in PM) 
 int LT = 100; //Low temp
 int X10ALT = 0; //on/off var
 int var = 1 ; // X10 var = unit number for fan
 int Hvar = 5; //X10 var for heater
 int XPump = 2; // X10 var = unit number for pump
 int Pontime = 15; // Pump ON duration per watering, change this to alter pump ON normal (not hot+ )time
-int HotPtime = 10; 
+int HotPtime = 10; //default plus time when fan is on
 int TooHotAlarm = 0;
 int FanONTemp = 80; // default temp to turn fan on - can set as needed in program
 int HeatONtemp = 36; // default temp to turn heater on - can set as needed in program
-int pstat = 0; 
+int pstat = 0; // status of pump
 int sec, hor, Min;
 int da, mo, yr;
 int m, h;
 int whatthingcop = 0;
 int Pcop = 0;
-//int m = rtc.minute();
-//int h = rtc.hour();
-//int da = rtc.date();
-//int mo = rtc.month();
-//int yr = rtc.year();
-// da;mo;yr;
 
 
 char hourstring[10], secstring[10], Minstring[10];// create string arrays
@@ -210,8 +217,6 @@ goto Bail;
 }
 
 
-
-
 if (Min == 16 && sec < Pontime) // water at 16 after each hour
 {
 
@@ -230,9 +235,6 @@ pstat = 1;
 goto Bail;
 }
 
-
-
-
 if (Min == 31 && sec < Pontime)// 
 {
   if (pstat == 1) // 1st time through only if pump status is 0 (off)
@@ -245,8 +247,6 @@ whatthingcop = 0; // reset screen 8
 pstat = 1; // pump status is ON
 goto Bail;
 } 
-
-
 
 
 if (Min == 46 && sec < Pontime)
@@ -266,7 +266,6 @@ whatthingcop = 0; // reset screen 8
 pstat = 1; // pump ON
 goto Bail;
 }
-
 
 
 if (pstat == 1)  // will only get here if nothing is true above
@@ -311,8 +310,6 @@ switch (screen) {
     
   LCD.write(254); // cursor to 7th position on first line
   LCD.write(128);
-  
- 
   LCD.write(hourstring); // write out the Hor value 
   LCD.write(254); // cursor to 7th position on second line
   LCD.write(130);
@@ -373,9 +370,7 @@ FanONTemp = FanONTemp -1;
 
   LCD.write(254); 
   LCD.write(128);
-  //  LCD.write("Screen = :"); // write out the Fan TEMP ON value
- // LCD.print(screen); // write out the Pump ON duration time
-  
+ 
   LCD.write("Fan on Temp:"); // write out the Fan TEMP ON value
   if (FanONTemp < 10)
   {
@@ -479,7 +474,6 @@ butState7 = digitalRead(button7);
   LCD.write(192);
   LCD.write("DN for C1 OFF 1"); // write out the Fan TEMP ON value
 
- // digitalWrite(ss,LOW); // pump = off
   X10.sendCmd( hcC, (var), cmdOff );
   delay (750);
   
@@ -507,7 +501,6 @@ if (casecop != 5) // must equal 4
   LCD.write("DN= PUMP OFF:  "); // 
 
   }
-
 
 
  butState5 = digitalRead(button5);
@@ -545,8 +538,6 @@ butState7 = digitalRead(button7);
    casecop = 5;
       break; 
 
-
-// new case start
  case 6:
 
  if (casecop != 6)   //  !=  is does not equal...to keep from flicker of reprinting LCD
@@ -903,8 +894,7 @@ Serial.print(pstat); // Print second
 
 
 //pstat = 1; // pump ON
-//int Pontime = 15; // Pump ON duration per watering, change this to alter pump ON normal (not hot+ )time
-//int HotPtime = 10; 
+//int Pontime = 15; // Default Pump ON duration per watering, change this to alter pump ON normal (not hot+ )time
 
 
   if (rtc.is12Hour()) // If we're in 12-hour mode
